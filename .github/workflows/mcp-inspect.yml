@@ -31,4 +31,4 @@ jobs:
           pip install .
 
       - name: List tools via MCP Inspector CLI
-        run: npx -y @modelcontextprotocol/inspector --cli ap2-iso20022 --method tools/list
+        run: npx -y @modelcontextprotocol/inspector --cli ap2-iso20022-mcp --method tools/list
