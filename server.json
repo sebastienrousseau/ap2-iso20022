@@ -1,0 +1,8 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.sebastienrousseau/ap2-iso20022",
+  "description": "Bridge AP2 / x402 agent-payment mandates into wire-valid ISO 20022 pain.001 / pacs.008 records.",
+  "repository": { "url": "https://github.com/sebastienrousseau/ap2-iso20022", "source": "github" },
+  "version": "0.0.1",
+  "packages": [ { "registryType": "pypi", "identifier": "ap2-iso20022", "version": "0.0.1", "transport": { "type": "stdio" } } ]
+}
