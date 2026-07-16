@@ -68,13 +68,11 @@ record = bridge.to_pain001(mandate)   # exact pain001 field names + JSON number 
 
 ## Tools
 
-| Tool | What it does |
-| --- | --- |
-| `normalize_ap2` | AP2 mandate payload → canonical mandate. |
-| `normalize_x402` | x402 payment payload → canonical mandate. |
-| `check_mandate` | Guardrail: required fields, spending cap, expiry (with `as_of`), authorisation proof. |
-| `to_pain001` | Canonical mandate → `pain.001` record (customer credit transfer). |
-| `to_pacs008` | Canonical mandate → `pacs.008` record (FI-to-FI). |
+- `normalize_ap2` — AP2 mandate payload → canonical mandate.
+- `normalize_x402` — x402 payment payload → canonical mandate.
+- `check_mandate` — Guardrail: required fields, spending cap, expiry (with `as_of`), authorisation proof.
+- `to_pain001` — Canonical mandate → `pain.001` record (customer credit transfer).
+- `to_pacs008` — Canonical mandate → `pacs.008` record (FI-to-FI).
 
 The output field names and types match what `pain001` / `pacs008` expect
 (validated against their JSON schemas), so `to_pain001(mandate)` → pain001
