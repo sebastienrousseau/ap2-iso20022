@@ -11,14 +11,18 @@ on:
         required: true
         default: "v0.0.1"
 
+# Least privilege at the top level; each job opts into only what it needs.
 permissions:
-  contents: write   # create/update the GitHub Release
-  id-token: write   # OIDC token for PyPI Trusted Publishing
+  contents: read
 
 jobs:
   publish:
     name: Build And Publish
     runs-on: ubuntu-latest
+    permissions:
+      contents: write       # create/update the GitHub Release
+      id-token: write       # OIDC token for PyPI Trusted Publishing + sigstore
+      attestations: write   # write SLSA build provenance attestations
     # Must match the "Environment name" set on the PyPI trusted publisher.
     environment:
       name: pypi
@@ -27,15 +31,15 @@ jobs:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
 
-      - name: Install build tooling
-        run: pip install poetry twine
+      - name: Install build tooling (hash-pinned)
+        run: pip install --require-hashes -r requirements/build.txt
 
       - name: Build distributions
         run: poetry build
@@ -43,15 +47,42 @@ jobs:
       - name: Check distributions
         run: twine check dist/*
 
+      # SLSA Build Level 3 provenance attestations for every distribution
+      # file. Bound to the exact files just built, signed via sigstore keyless
+      # (Fulcio + Rekor) using the workflow's OIDC identity. Visible on the
+      # GitHub workflow run page; verifiable with `gh attestation verify`.
+      - name: Generate SLSA build provenance attestation
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: "dist/*"
+
       # Trusted Publishing (OIDC) — no API token/secret required. Requires a
       # matching publisher to be configured on PyPI for this repo + workflow.
-      # Uses the PYPI_API_TOKEN secret when present (token auth); otherwise
-      # falls back to Trusted Publishing (OIDC). skip-existing keeps re-runs safe.
+      # ``attestations: true`` emits PEP 740 sigstore attestations alongside
+      # the uploaded distributions so PyPI shows them on the project page.
+      # ``skip-existing`` keeps re-runs safe.
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: true
           skip-existing: true
+
+      # Keyless sigstore signatures (Fulcio + Rekor via the workflow's OIDC
+      # identity, no secrets) for every distribution, attached to the GitHub
+      # release as .sig + .pem so the release is verifiably signed.
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: "v2.4.3"
+
+      - name: Sign distributions (keyless)
+        run: |
+          for f in dist/*; do
+            cosign sign-blob --yes \
+              --output-signature "${f}.sig" \
+              --output-certificate "${f}.pem" \
+              "$f"
+          done
 
       - name: Publish release artifacts to GitHub
         env:
@@ -62,3 +93,74 @@ jobs:
           else
             gh release create "${RELEASE_TAG}" dist/* --repo "${{ github.repository }}" --title "${RELEASE_TAG}" --generate-notes
           fi
+
+  sbom:
+    # Generate three supply-chain artifacts (CycloneDX 1.6 + SPDX + a
+    # pip-licenses JSON manifest) and attach them to the release.
+    # ``needs: publish`` ensures the release object exists before uploading.
+    name: SBOM (CycloneDX + SPDX + licenses)
+    runs-on: ubuntu-latest
+    needs: [publish]
+    permissions:
+      contents: write       # upload SBOM + license manifests to the Release
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry (hash-pinned)
+        run: pip install --require-hashes -r requirements/build.txt
+
+      - name: Install runtime dependencies
+        run: poetry install --no-interaction --only main
+
+      - name: Install SBOM + license tooling (hash-pinned)
+        run: pip install --require-hashes -r requirements/sbom.txt
+
+      - name: Generate CycloneDX SBOM (JSON)
+        run: |
+          poetry run cyclonedx-py environment \
+            --of JSON \
+            -o "ap2-iso20022-${RELEASE_TAG}.cdx.json"
+
+      - name: Generate SPDX SBOM (JSON)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          format: spdx-json
+          output-file: "ap2-iso20022-${{ env.RELEASE_TAG }}.spdx.json"
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Generate pip-licenses manifest
+        run: |
+          poetry run pip-licenses \
+            --format=json \
+            --with-urls --with-license-file --no-license-path \
+            --output-file "ap2-iso20022-${RELEASE_TAG}.licenses.json"
+
+      - name: Upload SBOMs + license manifest to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${RELEASE_TAG}" \
+            "ap2-iso20022-${RELEASE_TAG}.cdx.json" \
+            "ap2-iso20022-${RELEASE_TAG}.spdx.json" \
+            "ap2-iso20022-${RELEASE_TAG}.licenses.json" \
+            --repo "${{ github.repository }}" --clobber
+
+      - name: Upload SBOM artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: sbom-bundle
+          path: |
+            ap2-iso20022-*.cdx.json
+            ap2-iso20022-*.spdx.json
+            ap2-iso20022-*.licenses.json
+          if-no-files-found: warn
