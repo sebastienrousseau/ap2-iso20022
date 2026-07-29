@@ -1,0 +1,36 @@
+{
+  "$schema": "https://glama.ai/api/mcp/v1/schemas/glama.json",
+  "maintainers": [
+    "sebastienrousseau"
+  ],
+  "title": "ap2-iso20022",
+  "display_name": "AP2 ISO 20022 MCP",
+  "description": "Bridge AP2 (Agent Payments Protocol) and x402 agent-payment mandates into wire-valid ISO 20022 pain.001 / pacs.008 records, with spending-cap, expiry and authorisation guardrails. Includes an MCP server.",
+  "version": "0.0.2",
+  "repository": "https://github.com/sebastienrousseau/ap2-iso20022",
+  "homepage": "https://ap2-iso20022.com",
+  "license": "Apache-2.0",
+  "language": "Python",
+  "runtime": "python",
+  "categories": [
+    "finance"
+  ],
+  "tags": [
+    "iso-20022",
+    "ap2",
+    "x402",
+    "agent-payments",
+    "pain001",
+    "pacs008",
+    "mcp",
+    "fintech"
+  ],
+  "mcpServers": {
+    "ap2-iso20022": {
+      "command": "ap2-iso20022-mcp"
+    }
+  },
+  "installation": {
+    "pip": "pip install ap2-iso20022"
+  }
+}
