@@ -5,7 +5,7 @@
   ],
   "title": "ap2-iso20022",
   "display_name": "AP2 ISO 20022 MCP",
-  "description": "Bridge AP2 (Agent Payments Protocol) and x402 agent-payment mandates into wire-valid ISO 20022 pain.001 / pacs.008 records, with spending-cap, expiry and authorisation guardrails. Includes an MCP server.",
+  "description": "Model Context Protocol (MCP) server that bridges AP2 (Agent Payments Protocol) and x402 agent-payment mandates into wire-valid ISO 20022 pain.001 and pacs.008 records. Normalises AP2/x402 mandates, checks them, and converts to initiation and clearing/settlement messages while enforcing spending-cap, expiry and authorisation guardrails. Apache-2.0, pure Python over stdio.",
   "version": "0.0.2",
   "repository": "https://github.com/sebastienrousseau/ap2-iso20022",
   "homepage": "https://ap2-iso20022.com",
@@ -20,10 +20,16 @@
     "ap2",
     "x402",
     "agent-payments",
+    "mandates",
     "pain001",
     "pacs008",
     "mcp",
-    "fintech"
+    "payments",
+    "guardrails",
+    "fastmcp",
+    "financial-services",
+    "fintech",
+    "agentic-payments"
   ],
   "mcpServers": {
     "ap2-iso20022": {
