@@ -20,9 +20,18 @@ import asyncio
 import pytest
 
 pytest.importorskip("mcp")
+pytest.importorskip("eth_account")
+
+from eth_account import Account  # noqa: E402
+from eth_account.messages import encode_defunct  # noqa: E402
 
 import ap2_iso20022.server as srv  # noqa: E402
 from ap2_iso20022 import __version__  # noqa: E402
+
+# A publicly-known throwaway test key (Hardhat account #1). NEVER a real key.
+_TEST_PRIVKEY = (
+    "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+)
 
 EXPECTED_TOOLS = {
     "normalize_ap2",
@@ -30,6 +39,12 @@ EXPECTED_TOOLS = {
     "check_mandate",
     "to_pain001",
     "to_pacs008",
+    "get_token_fiat_rate",
+    "check_agent_spend_limits",
+    "validate_mandate_expiry",
+    "normalize_token_amount",
+    "verify_x402_signature",
+    "validate_eip712_permit",
 }
 
 _AP2 = {
@@ -103,6 +118,76 @@ def test_to_pacs008_tool_happy_and_error():
     ok = srv.to_pacs008(mandate)
     assert ok["record"]["interbank_settlement_currency"] == "EUR"
     err = srv.to_pacs008({"payer_name": "x"})
+    assert "error" in err
+
+
+def test_get_token_fiat_rate_tool_delegates(monkeypatch):
+    # The tool is a thin pass-through to the bridge; assert it forwards args
+    # and returns the bridge result unchanged (bridge parsing is tested in
+    # test_bridge.py against a mocked HTTP boundary).
+    seen = {}
+
+    def fake_rate(symbol, fiat="USD"):
+        seen["args"] = (symbol, fiat)
+        return {"token": symbol, "rate": "1.0", "source": "coingecko"}
+
+    monkeypatch.setattr(srv.bridge, "get_token_fiat_rate", fake_rate)
+    res = srv.get_token_fiat_rate("USDC", "EUR")
+    assert seen["args"] == ("USDC", "EUR")
+    assert res == {"token": "USDC", "rate": "1.0", "source": "coingecko"}
+
+
+def test_get_token_fiat_rate_tool_annotation_is_open_world():
+    assert srv._ORACLE_READ.openWorldHint is True
+    assert srv._PURE_READ.openWorldHint is False
+
+
+def test_check_agent_spend_limits_tool_happy_and_error():
+    ok = srv.check_agent_spend_limits("agent-1", 50)
+    assert ok["is_allowed"] is True
+    err = srv.check_agent_spend_limits("agent-1", "not-a-number")
+    assert "error" in err
+
+
+def test_validate_mandate_expiry_tool_happy_and_error():
+    ok = srv.validate_mandate_expiry(2000, 1000)
+    assert ok["is_valid"] is True
+    err = srv.validate_mandate_expiry("bad", 1000)
+    assert "error" in err
+
+
+def test_normalize_token_amount_tool_happy_and_error():
+    ok = srv.normalize_token_amount(1_000_000, "USDC")
+    assert ok["amount"] == "1"
+    assert ok["decimals"] == 6
+    err = srv.normalize_token_amount(1_000_000, "DOGE")
+    assert "error" in err
+
+
+def test_verify_x402_signature_tool_happy_and_error():
+    acct = Account.from_key(_TEST_PRIVKEY)
+    mandate_json = '{"payer":"Alice","amount":"1.00"}'
+    signed = acct.sign_message(encode_defunct(text=mandate_json))
+    ok = srv.verify_x402_signature(
+        mandate_json, signed.signature.hex(), acct.address
+    )
+    assert ok["is_valid"] is True
+    assert ok["recovered_address"].lower() == acct.address.lower()
+    err = srv.verify_x402_signature(mandate_json, "0xnothex", acct.address)
+    assert "error" in err
+
+
+def test_validate_eip712_permit_tool_happy_and_error():
+    permit = {
+        "owner": "0x" + "a" * 40,
+        "spender": "0x" + "b" * 40,
+        "value": "1000000",
+        "nonce": "0",
+        "deadline": "2000",
+    }
+    ok = srv.validate_eip712_permit(permit, 1000)
+    assert ok["is_valid"] is True
+    err = srv.validate_eip712_permit(permit, "bad")
     assert "error" in err
 
 
