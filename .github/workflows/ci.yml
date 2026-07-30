@@ -26,13 +26,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Installs this package editable (so coverage collects); the only
-      # runtime dependency, `mcp`, resolves from PyPI.
+      # Installs this package editable (so coverage collects) with the
+      # `oracle` extra (httpx) so the get_token_fiat_rate tool and its
+      # respx-mocked tests are exercised; `mcp` and `eth-account` resolve
+      # from PyPI. respx mocks the HTTP boundary so tests never hit the network.
       - name: Install this package
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
-          pip install pytest pytest-cov
+          pip install -e ".[oracle]"
+          pip install pytest pytest-cov respx
 
       # The pyproject addopts enforce --cov-branch --cov-fail-under=100, so a
       # coverage regression fails the build here.
@@ -54,7 +56,7 @@ jobs:
       - name: Install this package
         run: |
           python -m pip install --upgrade pip
-          pip install .
+          pip install ".[oracle]"
           pip install ruff black mypy
 
       - name: Ruff check

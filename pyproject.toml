@@ -27,6 +27,14 @@ ap2-iso20022-mcp = "ap2_iso20022.server:main"
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
 mcp = ">=1.2,<2"
+eth-account = ">=0.11,<1"
+# Optional: only needed by the get_token_fiat_rate price oracle, which reaches
+# the CoinGecko HTTP API. Installed via the `oracle` extra; imported lazily so
+# the core bridge/server never require it.
+httpx = { version = ">=0.27,<1", optional = true }
+
+[tool.poetry.extras]
+oracle = ["httpx"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=9.0.3,<10.0.0"
@@ -112,6 +120,12 @@ exclude = [
 
 [[tool.mypy.overrides]]
 module = "mcp.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# httpx (oracle extra) and eth_account (Web3 tools) are optional/lazily
+# imported; don't fail type-checking environments installed without them.
+module = ["httpx.*", "eth_account.*", "eth_keys.*", "eth_utils.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

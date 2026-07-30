@@ -38,9 +38,13 @@ The canonical mandate is a plain dict:
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
+
+from eth_account import Account
+from eth_account.messages import encode_defunct
 
 # Core economic fields a mandate must carry to become a payment instruction.
 _REQUIRED = (
@@ -70,6 +74,14 @@ def _to_decimal(value: Any) -> Decimal | None:
         return Decimal(str(value))
     except (InvalidOperation, ValueError, TypeError):
         return None
+
+
+def _decimal_or_raise(value: Any, name: str) -> Decimal:
+    """Coerce ``value`` to Decimal or raise ``ValueError`` naming the field."""
+    number = _to_decimal(value)
+    if number is None:
+        raise ValueError(f"{name} must be a number")
+    return number
 
 
 def normalize_mandate(raw: dict[str, Any]) -> dict[str, Any]:
@@ -275,6 +287,82 @@ def to_pain001(mandate: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# CoinGecko public simple-price endpoint (no API key). Token symbols map to
+# CoinGecko coin ids; the vs_currency is the lower-cased fiat code.
+_COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price"
+_TOKEN_IDS = {
+    "USDC": "usd-coin",
+    "USDT": "tether",
+    "EURC": "euro-coin",
+    "ETH": "ethereum",
+    "SOL": "solana",
+}
+
+
+def get_token_fiat_rate(
+    token_symbol: str, fiat_currency: str = "USD"
+) -> dict[str, Any]:
+    """Fetch a spot token->fiat rate from the CoinGecko public API.
+
+    Unlike the rest of this module this reaches an external service, so it is
+    an *open-world* read: the returned rate is a live spot price, not a
+    guarantee, and repeated calls may differ.
+
+    ``httpx`` is an optional dependency behind the ``oracle`` extra and is
+    imported lazily, so importing this module never requires it.
+
+    Args:
+        token_symbol: One of the supported symbols (USDC, USDT, EURC, ETH,
+            SOL); matched case-insensitively.
+        fiat_currency: Fiat currency code to price in (default ``USD``).
+
+    Returns:
+        On success ``{"token", "fiat_currency", "rate", "source"}`` where
+        ``rate`` is a Decimal-safe string. Mirrors the module's error
+        convention with ``{"error": ...}`` for an unsupported symbol, a
+        missing ``oracle`` extra, or a failed fetch.
+    """
+    symbol = str(token_symbol or "").upper()
+    coin_id = _TOKEN_IDS.get(symbol)
+    if coin_id is None:
+        return {
+            "error": (
+                f"unsupported token symbol {token_symbol!r}; supported: "
+                f"{', '.join(sorted(_TOKEN_IDS))}"
+            )
+        }
+
+    try:
+        import httpx
+    except ImportError:
+        return {
+            "error": (
+                "the price oracle requires the optional 'oracle' extra; "
+                "install it with: pip install ap2-iso20022[oracle]"
+            )
+        }
+
+    vs = str(fiat_currency or "USD").lower()
+    try:
+        response = httpx.get(
+            _COINGECKO_URL,
+            params={"ids": coin_id, "vs_currencies": vs},
+            timeout=10.0,
+        )
+        response.raise_for_status()
+        rate = response.json()[coin_id][vs]
+    except (httpx.HTTPError, KeyError, ValueError, TypeError):
+        # Transport failure, non-2xx status, or an unexpected payload shape.
+        return {"error": "oracle fetch failed"}
+
+    return {
+        "token": symbol,
+        "fiat_currency": vs.upper(),
+        "rate": str(rate),
+        "source": "coingecko",
+    }
+
+
 def to_pacs008(mandate: dict[str, Any]) -> dict[str, Any]:
     """Convert a canonical mandate into a ``pacs.008`` (FI-to-FI) record.
 
@@ -305,3 +393,185 @@ def to_pacs008(mandate: dict[str, Any]) -> dict[str, Any]:
         "creditor_account_iban": mandate["payee_account_iban"],
         "remittance_information": mandate["reference"],
     }
+
+
+# --- Tier-2 guardrails: agent spend, expiry, token, Web3 --------------------
+#
+# These are stateless, pure validators over their arguments. Anything that
+# needs "now" or a running spend total is supplied by the caller -- the server
+# never reads a clock or persists state, keeping every tool deterministic.
+
+
+# ISO 4217-style USD stablecoin / native-token base-unit precision. Base units
+# (the on-chain integer) divided by 10**decimals give the human amount.
+_TOKEN_DECIMALS = {
+    "USDC": 6,
+    "USDT": 6,
+    "EURC": 6,
+    "ETH": 18,
+    "SOL": 9,
+}
+
+# EIP-2612 permit fields that must be present and well-formed.
+_PERMIT_FIELDS = ("owner", "spender", "value", "nonce", "deadline")
+
+_HEX_ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
+
+
+def _is_hex_address(value: Any) -> bool:
+    """Return True if ``value`` looks like a 20-byte 0x-prefixed address."""
+    return bool(_HEX_ADDRESS_RE.match(str(value)))
+
+
+def check_agent_spend_limits(
+    agent_id: str,
+    proposed_amount_usd: Any,
+    per_tx_cap: Any = 1000,
+    daily_cap: Any = 5000,
+    monthly_cap: Any = 20000,
+    spent_today: Any = 0,
+    spent_month: Any = 0,
+) -> dict[str, Any]:
+    """Check a proposed agent spend against per-tx / daily / monthly caps.
+
+    Stateless: the caller passes the current ``spent_today`` / ``spent_month``
+    running totals; nothing is persisted here. ``remaining_daily_cap`` is the
+    headroom left today before this transaction (``daily_cap - spent_today``).
+
+    Raises:
+        ValueError: if the proposed amount is not positive, or any cap/total is
+            not a number.
+    """
+    amount = _decimal_or_raise(proposed_amount_usd, "proposed_amount_usd")
+    if amount <= 0:
+        raise ValueError("proposed_amount_usd must be a positive number")
+    per_tx = _decimal_or_raise(per_tx_cap, "per_tx_cap")
+    daily = _decimal_or_raise(daily_cap, "daily_cap")
+    monthly = _decimal_or_raise(monthly_cap, "monthly_cap")
+    today = _decimal_or_raise(spent_today, "spent_today")
+    month = _decimal_or_raise(spent_month, "spent_month")
+
+    violations: list[str] = []
+    if amount > per_tx:
+        violations.append(
+            f"proposed amount {amount} exceeds per-transaction cap {per_tx}"
+        )
+    if today + amount > daily:
+        violations.append(
+            f"daily spend {today + amount} would exceed daily cap {daily}"
+        )
+    if month + amount > monthly:
+        violations.append(
+            f"monthly spend {month + amount} would exceed monthly cap "
+            f"{monthly}"
+        )
+
+    return {
+        "is_allowed": not violations,
+        "remaining_daily_cap": str(daily - today),
+        "violations": violations,
+    }
+
+
+def validate_mandate_expiry(
+    expiration_timestamp: Any, now_timestamp: Any
+) -> dict[str, Any]:
+    """Check a mandate's expiry by unix-epoch (seconds) comparison.
+
+    The caller supplies ``now_timestamp`` -- the server never reads the system
+    clock, so the check stays deterministic. A mandate is valid while ``now``
+    is strictly before ``expiration``.
+
+    Raises:
+        ValueError: if either timestamp is not a number.
+    """
+    expiration = _decimal_or_raise(
+        expiration_timestamp, "expiration_timestamp"
+    )
+    now = _decimal_or_raise(now_timestamp, "now_timestamp")
+    return {"is_valid": now < expiration}
+
+
+def normalize_token_amount(
+    raw_base_units: Any, token_symbol: Any
+) -> dict[str, Any]:
+    """Normalise raw on-chain base units to a human token amount.
+
+    Divides ``raw_base_units`` by ``10**decimals`` for the token's precision
+    (USDC/USDT/EURC=6, SOL=9, ETH=18) and trims trailing zeros.
+
+    Raises:
+        ValueError: on an unsupported token, a non-numeric amount, or a
+            negative amount.
+    """
+    symbol = str(token_symbol or "").upper()
+    if symbol not in _TOKEN_DECIMALS:
+        raise ValueError(f"unsupported token: {token_symbol!r}")
+    decimals = _TOKEN_DECIMALS[symbol]
+    raw = _decimal_or_raise(raw_base_units, "raw_base_units")
+    if raw < 0:
+        raise ValueError("raw_base_units must be non-negative")
+    # scaleb shifts the decimal point without rounding the coefficient; format
+    # 'f' forces fixed-point (never scientific), then trim the fraction. The
+    # '.' introduced by decimals >= 6 makes the strip safe for whole amounts.
+    fixed = format(raw.scaleb(-decimals), "f")
+    amount = fixed.rstrip("0").rstrip(".")
+    return {"amount": amount, "decimals": decimals}
+
+
+def verify_x402_signature(
+    mandate_json: str, signature_hex: str, expected_address: str
+) -> dict[str, Any]:
+    """Verify an x402 EIP-191 ``personal_sign`` over the mandate JSON.
+
+    Recovers the signer from the signature using ``eth_account`` and compares
+    it (case-insensitively) to ``expected_address``.
+
+    Raises:
+        ValueError: if the signature is malformed and no signer can be
+            recovered.
+    """
+    message = encode_defunct(text=mandate_json)
+    try:
+        recovered = Account.recover_message(message, signature=signature_hex)
+    except Exception as exc:  # malformed signature / bad hex / wrong length
+        raise ValueError(f"malformed signature: {exc}") from exc
+    is_valid = str(recovered).lower() == str(expected_address).lower()
+    return {"is_valid": is_valid, "recovered_address": str(recovered)}
+
+
+def validate_eip712_permit(
+    permit: dict[str, Any], now_timestamp: Any
+) -> dict[str, Any]:
+    """Validate the EIP-2612 permit fields and its deadline.
+
+    Checks ``owner``/``spender``/``value``/``nonce``/``deadline`` are present
+    and well-formed (addresses are 0x-prefixed 20-byte hex; value/nonce/
+    deadline are numeric) and that ``deadline`` is not before the
+    caller-supplied ``now_timestamp``.
+
+    Raises:
+        ValueError: if ``now_timestamp`` is not a number.
+    """
+    violations: list[str] = []
+
+    missing = [f for f in _PERMIT_FIELDS if permit.get(f) in (None, "")]
+    if missing:
+        violations.append(f"missing permit field(s): {', '.join(missing)}")
+
+    for field in ("owner", "spender"):
+        value = permit.get(field)
+        if value not in (None, "") and not _is_hex_address(value):
+            violations.append(f"{field} is not a valid address: {value!r}")
+
+    for field in ("value", "nonce", "deadline"):
+        value = permit.get(field)
+        if value not in (None, "") and _to_decimal(value) is None:
+            violations.append(f"{field} is not a valid number: {value!r}")
+
+    now = _decimal_or_raise(now_timestamp, "now_timestamp")
+    deadline = _to_decimal(permit.get("deadline"))
+    if deadline is not None and deadline < now:
+        violations.append(f"permit deadline {deadline} is in the past")
+
+    return {"is_valid": not violations, "violations": violations}
