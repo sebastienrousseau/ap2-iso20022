@@ -16,6 +16,7 @@
 """Tests for the ap2-iso20022 MCP server tool surface."""
 
 import asyncio
+import json
 
 import pytest
 
@@ -26,7 +27,7 @@ from eth_account import Account  # noqa: E402
 from eth_account.messages import encode_defunct  # noqa: E402
 
 import ap2_iso20022.server as srv  # noqa: E402
-from ap2_iso20022 import __version__  # noqa: E402
+from ap2_iso20022 import __version__, bridge  # noqa: E402
 
 # A publicly-known throwaway test key (Hardhat account #1). NEVER a real key.
 _TEST_PRIVKEY = (
@@ -198,3 +199,63 @@ def test_main_runs_server(monkeypatch):
     )
     srv.main()
     assert called["ran"] is True
+
+
+# --- prompt -----------------------------------------------------------------
+
+
+def test_audit_prompt_registered():
+    names = {p.name for p in srv.server._prompt_manager.list_prompts()}
+    assert "audit_agent_spending_mandate" in names
+
+
+def test_audit_prompt_default_and_named_agent():
+    # Default (empty) branch: no specific agent named.
+    generic = srv.audit_agent_spending_mandate()
+    assert "the AP2 agent" in generic
+    # Named branch: the agent id is woven into the guidance.
+    named = srv.audit_agent_spending_mandate("agent-77")
+    assert "agent-77" in named
+    # Both teach the full workflow in order.
+    for text in (generic, named):
+        assert "normalize_ap2" in text
+        assert "normalize_x402" in text
+        assert "check_mandate" in text
+        assert "to_pain001" in text
+        assert "to_pacs008" in text
+
+
+# --- resources --------------------------------------------------------------
+
+
+def test_guardrails_static_resource_lists_ids():
+    resources = {
+        str(r.uri) for r in srv.server._resource_manager.list_resources()
+    }
+    assert "ap2://guardrails" in resources
+    payload = json.loads(srv.guardrail_policies())
+    assert payload == {"policies": ["default"]}
+
+
+def test_guardrails_templated_resource_registered():
+    templates = {
+        t.uri_template for t in srv.server._resource_manager.list_templates()
+    }
+    assert "ap2://guardrails/{policy_id}" in templates
+
+
+def test_guardrail_policy_default_reflects_check_mandate():
+    policy = json.loads(srv.guardrail_policy("default"))
+    assert policy["policy_id"] == "default"
+    # Required fields are sourced from the bridge, so they cannot drift.
+    assert policy["required_fields"] == list(bridge._REQUIRED)
+    assert policy["spend_cap"]["severity"] == "violation"
+    assert policy["expiry"]["severity"] == "violation"
+    # Missing proof is only a warning, matching check_mandate.
+    assert policy["proof"]["severity"] == "warning"
+
+
+def test_guardrail_policy_unknown_id_returns_error():
+    err = json.loads(srv.guardrail_policy("nope"))
+    assert "error" in err
+    assert "nope" in err["error"]
