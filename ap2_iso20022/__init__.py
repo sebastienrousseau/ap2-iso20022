@@ -15,4 +15,4 @@
 
 """ap2-iso20022: bridge AP2/x402 agent-payment mandates to ISO 20022."""
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
