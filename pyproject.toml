@@ -33,6 +33,12 @@ eth-account = ">=0.11,<1"
 # the core bridge/server never require it.
 httpx = { version = ">=0.27,<1", optional = true }
 
+# Transitive, via `mcp` -> `pyjwt[crypto]`. Nothing in this tree
+# constrains it, so a resolver is free to pick a version in the
+# >=44.0.0,<50.0.0 range that GHSA flags as high severity. Floored
+# here so the patched line is the only resolvable one; the pins in
+# requirements/ already sit at 50.0.0.
+cryptography = ">=50.0.0"
 [tool.poetry.extras]
 oracle = ["httpx"]
 
