@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ap2-iso20022"
-version = "0.0.3"
+version = "0.0.4"
 description = "Bridge AP2 (Agent Payments Protocol) and x402 agent-payment mandates into wire-valid ISO 20022 pain.001 / pacs.008 records, with spending-cap, expiry and authorisation guardrails. Includes an MCP server."
 authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
 license = "Apache-2.0 OR MIT"
@@ -49,12 +49,23 @@ black = "^26.3.1"
 ruff = "^0.1.0"
 mypy = "^1.11.0"
 bandit = "^1.7.0"
+# tests/test_suite_conformance.py parses pyproject.toml. tomllib is
+# stdlib only from 3.11 and the suite floor is 3.10, so without the
+# backport the conformance gate does not run there at all.
+tomli = { version = ">=2", python = "<3.11" }
+packaging = ">=23"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+# tests/test_suite_conformance.py is generated and vendored from one
+# canonical copy shared across the suite, and checksummed by its own
+# test. The suite uses three different line lengths, so letting each
+# repository's formatter rewrite it would make the checksum
+# unsatisfiable everywhere.
 [tool.black]
+extend-exclude = "tests/test_suite_conformance\\.py"
 line-length = 79
 target-version = ['py310']
 

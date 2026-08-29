@@ -41,6 +41,20 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v --tb=short
 
+      # Every worked example runs. An example that no longer works reads
+      # as verified and is not, which is worse than shipping none.
+      - name: Run the examples
+        run: |
+          for example in examples/*.py; do
+            echo "--- $example ---"
+            python "$example"
+          done
+
+      # Not a timing gate -- wall-clock is not comparable between runners.
+      # This proves the benchmark still runs against the current API.
+      - name: Run the benchmark
+        run: python benches/bench_bridge.py --quick
+
   lint:
     name: Lint & Type Check
     runs-on: ubuntu-latest
@@ -60,10 +74,10 @@ jobs:
           pip install ruff black mypy
 
       - name: Ruff check
-        run: ruff check ap2_iso20022/ tests/
+        run: ruff check ap2_iso20022/ tests/ examples/ benches/
 
       - name: Black check
-        run: black --check ap2_iso20022/ tests/
+        run: black --check ap2_iso20022/ tests/ examples/ benches/
 
       - name: Mypy
         run: mypy ap2_iso20022/
