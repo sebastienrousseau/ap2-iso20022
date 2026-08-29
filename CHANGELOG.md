@@ -7,6 +7,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] - 2026-08-29
+
+Adds the scheduled release-consistency check this repository was
+missing, and refreshes the shared conformance gate.
+
+### Added
+
+- `scripts/check_suite_consistency.py` and a scheduled **Release
+  Consistency** workflow compare this tree against what is actually
+  published on PyPI. A version bumped in the tree and never released
+  breaks nothing — the tree is consistent, the tests pass, the changelog
+  is written — and only the index disagrees. That has happened three
+  times in this suite, each time stranding a security floor that reached
+  nobody.
+- The check distinguishes the two directions: a tree ahead of the index
+  is the expected transient between merging a bump and pushing its tag,
+  while a tree *behind* it means a release was cut from somewhere other
+  than this branch.
+
+### Changed
+
+- Refreshed `tests/test_suite_conformance.py` to the current canonical
+  copy. This repository was carrying a 24-invariant version; the
+  twenty-fifth is the one that requires the check added above, so it had
+  been conformant only against an older bar.
+
 ## [0.0.4] - 2026-08-29
 
 The first release since 0.0.2. **`0.0.3` was bumped in the tree but never
