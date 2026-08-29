@@ -1,0 +1,36 @@
+name: Release Consistency
+
+# A version bumped in the tree and never released breaks nothing. The
+# tree is consistent, the tests pass, the changelog is written. Only the
+# package index disagrees, and only if somebody goes and looks.
+#
+# That has happened three times in this suite, each time stranding a
+# security floor that reached nobody. This does the looking.
+on:
+  schedule:
+    - cron: "11 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-consistency
+  cancel-in-progress: true
+
+jobs:
+  consistency:
+    name: Tree agrees with what is published
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Queries pypi.org and exits non-zero when the tree and the index
+      # disagree, so a schedule becomes a notification rather than a
+      # report nobody opens.
+      - name: Check release consistency
+        run: python3 scripts/check_suite_consistency.py

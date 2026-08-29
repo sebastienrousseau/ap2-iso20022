@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ap2-iso20022"
-version = "0.0.4"
+version = "0.0.5"
 description = "Bridge AP2 (Agent Payments Protocol) and x402 agent-payment mandates into wire-valid ISO 20022 pain.001 / pacs.008 records, with spending-cap, expiry and authorisation guardrails. Includes an MCP server."
 authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
 license = "Apache-2.0 OR MIT"
