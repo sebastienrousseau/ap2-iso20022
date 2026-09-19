@@ -9,8 +9,8 @@ server.** These agentic-payment protocols authorise a payment; this library
 turns that authorisation into the **bank-rail message that actually settles it**
 — the rail the card networks and stablecoins don't cover.
 
-> **Latest release: v0.0.5** — 11 MCP tools over stdio, pure-Python (only `mcp`),
-> 100% branch coverage, for Python 3.10+. Output feeds straight into
+> **Latest release: v0.0.5** — 11 MCP tools over stdio, streamable HTTP or
+> SSE, pure-Python (only `mcp`), 100% branch coverage, for Python 3.10+. Output feeds straight into
 > [`pain001`][pain001-mcp] / [`pacs008`][pacs008-mcp] to generate wire-valid XML.
 > Part of the [ISO 20022 MCP suite](#the-suite).
 
@@ -28,7 +28,7 @@ actual payment stays an explicit, guarded step.
 ```sh
 pip install ap2-iso20022
 # or run the MCP server without installing:
-uvx ap2-iso20022
+uvx --from ap2-iso20022 ap2-iso20022-mcp
 ```
 
 MCP client config (e.g. Claude Desktop):
@@ -39,6 +39,32 @@ MCP client config (e.g. Claude Desktop):
     "ap2-iso20022": {
       "command": "ap2-iso20022-mcp"
     }
+  }
+}
+```
+
+## Transports
+
+One command line, three transports:
+
+| Command | Transport | Endpoint | Protocol revisions |
+| :--- | :--- | :--- | :--- |
+| `ap2-iso20022-mcp` | stdio | the client spawns the process | 2026-07-28, 2025-11-25 |
+| `ap2-iso20022-mcp --transport streamable-http` | Streamable HTTP | `http://127.0.0.1:8000/mcp` | 2026-07-28 (stateless, `server/discover`) and 2025-11-25 (`initialize`, `Mcp-Session-Id`) on the same endpoint; responses stream as server-sent events, `GET` opens the server-to-client stream |
+| `ap2-iso20022-mcp --transport sse` | HTTP+SSE (2024-11-05) | `http://127.0.0.1:8000/sse` and `/messages/` | for clients that still expect the older transport |
+
+`--host` and `--port` change the bind address (defaults `127.0.0.1` and
+`8000`). The HTTP transports carry no authentication of their own: bind
+loopback, or put the server behind a gateway you trust before binding a
+routable address. Every release is verified over streamable HTTP with
+[scout](https://github.com/sebastienrousseau/scout) in both protocol
+eras and over SSE with the MCP SDK client; see
+[ADR 0001](docs/adr/0001-three-transports-one-command-line.md).
+
+```json
+{
+  "mcpServers": {
+    "ap2-iso20022": { "url": "http://127.0.0.1:8000/mcp" }
   }
 }
 ```
