@@ -11,7 +11,7 @@ between.
 Everything CI checks, you can run locally:
 
 ```sh
-pip install -e ".[dev]"
+pip install -e ".[oracle]" pytest pytest-cov respx ruff black mypy
 pytest                                  # tests plus the coverage gate
 ruff check ap2_iso20022/ tests/ examples/ benches/
 black --check ap2_iso20022/ tests/ examples/ benches/
@@ -22,6 +22,13 @@ python benches/bench_bridge.py --quick  # the benchmark still runs
 `pytest` fails below **100% branch coverage**. That is not ambitious for a
 package this size, and the branches that go untested are the refusal paths —
 which is where a payments bridge earns its keep.
+
+## Sign-off
+
+Every commit **must** carry a `Signed-off-by:` trailer, which is you
+certifying the [Developer Certificate of Origin](DCO.txt). `git commit -s`
+adds it; the `DCO` workflow fails a pull request that lacks one. To fix an
+existing branch: `git rebase --signoff main && git push --force-with-lease`.
 
 ## The rule that matters most
 
@@ -42,6 +49,12 @@ boundary. A change to any of them needs:
 - for signature verification, a check that rejection still costs roughly
   what acceptance costs — `benches/bench_bridge.py` reports the ratio, and a
   rejection that returns early would leak how far the check got.
+
+## Decisions
+
+A change that shapes the package (a new transport, a new registration
+pattern, a new guardrail class) gets a record in
+[`docs/adr/`](docs/adr/index.md).
 
 ## Benchmarks
 
@@ -65,9 +78,15 @@ that no repository can quietly weaken a shared gate.
 
 **Versions increment by 0.0.1.** `0.1.0` follows `0.0.999`, not `0.0.9`.
 
-The version appears in `pyproject.toml` and `ap2_iso20022/__init__.py`.
-Change both and add a `CHANGELOG.md` entry; the conformance tests check they
-agree.
+The version appears in `pyproject.toml`, `ap2_iso20022/__init__.py`,
+`glama.json` and `server.json`. Change all four and add a `CHANGELOG.md`
+entry; `scripts/verify_versions.py` and the conformance tests check they
+agree. The release process is in [`RELEASING.md`](RELEASING.md).
+
+## Governance
+
+Roles, decision making and how to become a maintainer are in
+[`GOVERNANCE.md`](GOVERNANCE.md).
 
 ## Licence
 

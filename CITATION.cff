@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+cff-version: 1.2.0
+message: "If you use ap2-iso20022 in research or production write-ups, please cite it as below."
+type: software
+title: "ap2-iso20022: Agent Payments Protocol and x402 mandates to ISO 20022"
+abstract: >-
+  A Python bridge and Model Context Protocol server that turns AP2 (Agent
+  Payments Protocol) and x402 agent-payment mandates into ISO 20022
+  pain.001 and pacs.008 records, with spending-cap, expiry and
+  authorisation guardrails. Eleven tools; nothing in the package moves
+  money.
+authors:
+  - family-names: Rousseau
+    given-names: Sebastien
+    email: sebastian.rousseau@gmail.com
+version: "0.0.5"
+date-released: "2026-08-29"
+license: "Apache-2.0 OR MIT"
+repository-code: "https://github.com/sebastienrousseau/ap2-iso20022"
+url: "https://ap2-iso20022.com"
+keywords:
+  - ISO 20022
+  - AP2
+  - x402
+  - agent payments
+  - pain.001
+  - pacs.008
+  - Model Context Protocol
+  - MCP
+  - AI agents
+  - payments

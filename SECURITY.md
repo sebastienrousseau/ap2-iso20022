@@ -9,8 +9,8 @@ receives fixes.
 
 | Version | Supported |
 | ------- | --------- |
-| 0.0.4   | :white_check_mark: |
-| < 0.0.4 | :x:               |
+| 0.0.5   | :white_check_mark: |
+| < 0.0.5 | :x:               |
 
 ## Reporting a vulnerability
 
@@ -61,6 +61,32 @@ Conversion builds a record; schema validation is downstream at generation.
 date of `1970-01-01`, a token symbol where ISO 4217 is expected, or empty
 agent BICs. See `docs/index.md`. If you are not validating downstream before
 sending, check these yourself.
+
+## The MCP server
+
+The server speaks MCP over stdio by default. `--transport
+streamable-http` and `--transport sse` open a listener that binds
+`127.0.0.1` unless `--host` says otherwise and carries no authentication
+or TLS of its own. Do not bind a routable address without a gateway in
+front of it that adds both. Mandates handed to the tools reach the
+model's context and any transcript kept of it; treat the accounts,
+addresses and signatures in them accordingly.
+
+## Continuous integration
+
+- `ci.yml` runs ruff, black, mypy --strict, pytest with the 100% branch
+  coverage gate, every example and the quick benchmark on every push
+  and pull request.
+- `codeql.yml` runs GitHub's CodeQL Python analysis on every push, pull
+  request and weekly.
+- `scorecard.yml` publishes the OpenSSF Scorecard weekly; every action
+  in every workflow is pinned by commit SHA.
+- `dco.yml` requires a `Signed-off-by:` trailer on every commit.
+- Dependabot (`.github/dependabot.yml`) proposes pip and GitHub Actions
+  updates weekly.
+- `release.yml` publishes to PyPI through OIDC trusted publishing with
+  SLSA build provenance, cosign signatures and SBOMs, from hash-pinned
+  build tooling.
 
 ## Dependencies
 
