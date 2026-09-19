@@ -1,0 +1,17 @@
+name: "ap2-iso20022 CodeQL config"
+
+# The examples and the tests deliberately drive the bridge with sample
+# payment data (IBANs, wallet addresses, a published throwaway test
+# key). CodeQL's ``py/clear-text-logging-sensitive-data`` heuristic
+# flags ``print(...)`` of any expression downstream of those fields
+# even when the values are obviously fake fixtures. Excluding them
+# keeps the scan focused on the code that ships in ``ap2_iso20022/``.
+paths-ignore:
+  - examples
+  - tests
+  - benches
+
+# Use the default + security-extended query suite so we get the same
+# coverage GitHub's default setup would have offered.
+queries:
+  - uses: security-and-quality

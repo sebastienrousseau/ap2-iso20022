@@ -42,7 +42,8 @@ Launching the server:
           }
         }
 
-The server communicates over stdio (the SDK's default transport).
+stdio by default; ``--transport streamable-http`` or ``--transport sse``
+listens on ``--host``/``--port`` instead. See :mod:`ap2_iso20022._cli`.
 """
 
 import json
@@ -51,7 +52,7 @@ from typing import Annotated, Any
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
-from ap2_iso20022 import __version__, bridge
+from ap2_iso20022 import __version__, _cli, bridge
 from ap2_iso20022._mcp_compat import build_server
 
 # The shim picks FastMCP (mcp 1.x) or MCPServer (mcp 2.x) and reports
@@ -465,9 +466,16 @@ def guardrail_policy(
     return json.dumps(policy)
 
 
-def main() -> None:
-    """Run the AP2/x402 bridge MCP server over stdio (``ap2-iso20022-mcp``)."""
-    server.run()
+def main(argv: list[str] | None = None) -> None:
+    """Run the AP2/x402 bridge MCP server (the ``ap2-iso20022-mcp`` entry point).
+
+    stdio by default; ``--transport streamable-http`` or ``--transport sse``
+    listens on ``--host``/``--port`` instead. See :mod:`ap2_iso20022._cli`.
+
+    Args:
+        argv: Command-line arguments; ``None`` reads ``sys.argv[1:]``.
+    """
+    _cli.serve(server, argv, "ap2-iso20022-mcp", __version__)
 
 
 if __name__ == "__main__":
