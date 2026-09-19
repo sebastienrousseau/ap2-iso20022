@@ -7,6 +7,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The server is built through a small compatibility shim so it runs on
+  both supported majors of the `mcp` SDK: 2.x (`MCPServer`, the
+  2026-07-28 stateless revision with `server/discover`) and 1.x
+  (`FastMCP`). The dependency range is now `mcp>=1.2,<3`, so a fresh
+  install gets 2.x and speaks the current protocol revision.
+
 ## [0.0.5] - 2026-08-29
 
 Adds the scheduled release-consistency check this repository was

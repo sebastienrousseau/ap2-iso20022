@@ -26,7 +26,7 @@ ap2-iso20022-mcp = "ap2_iso20022.server:main"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
-mcp = ">=1.2,<2"
+mcp = ">=1.2,<3"
 eth-account = ">=0.11,<1"
 # Optional: only needed by the get_token_fiat_rate price oracle, which reaches
 # the CoinGecko HTTP API. Installed via the `oracle` extra; imported lazily so
@@ -134,6 +134,12 @@ exclude = [
     ".venv/",
     ".eggs/",
 ]
+
+# The server object comes from the SDK-compat shim, so its decorators
+# are untyped from mypy's point of view on either major.
+[[tool.mypy.overrides]]
+module = "ap2_iso20022.server"
+disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
 module = "mcp.*"
