@@ -46,7 +46,7 @@ oracle = ["httpx"]
 pytest = ">=9.0.3,<10.0.0"
 pytest-cov = ">=6.0.0,<8.0.0"
 black = "^26.3.1"
-ruff = "^0.1.0"
+ruff = ">=0.1,<0.17"
 mypy = "^1.11.0"
 bandit = "^1.7.0"
 # tests/test_suite_conformance.py parses pyproject.toml. tomllib is
