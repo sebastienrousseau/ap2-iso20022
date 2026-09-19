@@ -1,5 +1,7 @@
 # ap2-iso20022: Agent-payment mandates → wire-valid ISO 20022
 
+[![Glama MCP server score](https://glama.ai/mcp/servers/sebastienrousseau/ap2-iso20022/badges/score.svg)](https://glama.ai/mcp/servers/sebastienrousseau/ap2-iso20022)
+
 **Bridge [AP2][ap2] (Google's Agent Payments Protocol) and [x402][x402]
 (Coinbase's HTTP-402) mandates into ISO 20022 `pain.001` / `pacs.008` records —
 with spending-cap, expiry and authorisation guardrails, and an [MCP][mcp]
@@ -7,7 +9,7 @@ server.** These agentic-payment protocols authorise a payment; this library
 turns that authorisation into the **bank-rail message that actually settles it**
 — the rail the card networks and stablecoins don't cover.
 
-> **Latest release: v0.0.1** — 5 MCP tools over stdio, pure-Python (only `mcp`),
+> **Latest release: v0.0.5** — 11 MCP tools over stdio, pure-Python (only `mcp`),
 > 100% branch coverage, for Python 3.10+. Output feeds straight into
 > [`pain001`][pain001-mcp] / [`pacs008`][pacs008-mcp] to generate wire-valid XML.
 > Part of the [ISO 20022 MCP suite](#the-suite).
