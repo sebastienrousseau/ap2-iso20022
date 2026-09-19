@@ -26,6 +26,7 @@ pytest.importorskip("eth_account")
 from eth_account import Account  # noqa: E402
 from eth_account.messages import encode_defunct  # noqa: E402
 
+import ap2_iso20022._mcp_compat as compat  # noqa: E402
 import ap2_iso20022.server as srv  # noqa: E402
 from ap2_iso20022 import __version__, bridge  # noqa: E402
 
@@ -74,7 +75,7 @@ def test_all_tools_registered():
 
 
 def test_server_version_override():
-    assert srv.server._mcp_server.version == __version__
+    assert compat.server_version(srv.server) == __version__
 
 
 def test_normalize_ap2_happy_and_error():
@@ -139,8 +140,9 @@ def test_get_token_fiat_rate_tool_delegates(monkeypatch):
 
 
 def test_get_token_fiat_rate_tool_annotation_is_open_world():
-    assert srv._ORACLE_READ.openWorldHint is True
-    assert srv._PURE_READ.openWorldHint is False
+    # by_alias gives the wire (camelCase) names on both SDK majors
+    assert srv._ORACLE_READ.model_dump(by_alias=True)["openWorldHint"] is True
+    assert srv._PURE_READ.model_dump(by_alias=True)["openWorldHint"] is False
 
 
 def test_check_agent_spend_limits_tool_happy_and_error():
