@@ -7,10 +7,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.6] - 2026-10-03
 
 ### Added
 
+- Framework adapter module (`ap2_iso20022.adapters`) exporting AP2/x402 bridge
+  tools for LangChain, CrewAI, and LlamaIndex agents.
+- Animated terminal `demo.gif` rendered via VHS from `.github/demo.tape`.
+- `AGENTS.md` defining AI collaboration invariants and verification gates.
+- SPDX Apache-2.0 OR MIT dual license compliance with `LICENSES/` tree.
 - `--transport streamable-http` and `--transport sse`, with `--host` and
   `--port`. Streamable HTTP serves both current protocol revisions
   (2026-07-28 stateless with `server/discover`, and 2025-11-25 with the
