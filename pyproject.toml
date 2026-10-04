@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ap2-iso20022"
-version = "0.0.5"
+version = "0.0.6"
 description = "Bridge AP2 (Agent Payments Protocol) and x402 agent-payment mandates into wire-valid ISO 20022 pain.001 / pacs.008 records, with spending-cap, expiry and authorisation guardrails. Includes an MCP server."
 authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
 license = "Apache-2.0 OR MIT"
@@ -32,7 +32,6 @@ eth-account = ">=0.11,<1"
 # the CoinGecko HTTP API. Installed via the `oracle` extra; imported lazily so
 # the core bridge/server never require it.
 httpx = { version = ">=0.27,<1", optional = true }
-
 # Transitive, via `mcp` -> `pyjwt[crypto]`. Nothing in this tree
 # constrains it, so a resolver is free to pick a version in the
 # >=44.0.0,<50.0.0 range that GHSA flags as high severity. Floored
@@ -149,6 +148,17 @@ ignore_missing_imports = true
 # httpx (oracle extra) and eth_account (Web3 tools) are optional/lazily
 # imported; don't fail type-checking environments installed without them.
 module = ["httpx.*", "eth_account.*", "eth_keys.*", "eth_utils.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Agent frameworks are optional extras, lazily imported by adapters.py and not
+# present when type-checking the bridge in isolation.
+module = [
+    "langchain_core.*",
+    "crewai.*",
+    "crewai_tools.*",
+    "llama_index.*",
+]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

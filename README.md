@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+
 # ap2-iso20022: Agent-payment mandates → wire-valid ISO 20022
 
 [![Glama MCP server score](https://glama.ai/mcp/servers/sebastienrousseau/ap2-iso20022/badges/score.svg)](https://glama.ai/mcp/servers/sebastienrousseau/ap2-iso20022)
@@ -9,10 +11,16 @@ server.** These agentic-payment protocols authorise a payment; this library
 turns that authorisation into the **bank-rail message that actually settles it**
 — the rail the card networks and stablecoins don't cover.
 
-> **Latest release: v0.0.5** — 11 MCP tools over stdio, streamable HTTP or
+> **Latest release: v0.0.6** — 11 MCP tools over stdio, streamable HTTP or
 > SSE, pure-Python (only `mcp`), 100% branch coverage, for Python 3.10+. Output feeds straight into
 > [`pain001`][pain001-mcp] / [`pacs008`][pacs008-mcp] to generate wire-valid XML.
 > Part of the [ISO 20022 MCP suite](#the-suite).
+
+<p align="center">
+  <img src=".github/demo.gif" alt="ap2-iso20022 Demo" width="100%" />
+</p>
+
+---
 
 ## Why
 
