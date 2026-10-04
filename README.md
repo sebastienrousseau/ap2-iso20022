@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+
 # ap2-iso20022: Agent-payment mandates → wire-valid ISO 20022
 
 [![Glama MCP server score](https://glama.ai/mcp/servers/sebastienrousseau/ap2-iso20022/badges/score.svg)](https://glama.ai/mcp/servers/sebastienrousseau/ap2-iso20022)
