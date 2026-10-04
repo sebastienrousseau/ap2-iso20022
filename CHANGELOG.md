@@ -7,6 +7,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7] - 2026-10-04
+
+### Documentation
+
+- Standardized README license section header and reference.
+- Synchronized release version metadata across packaging descriptors.
+
 ## [0.0.6] - 2026-10-03
 
 ### Added
@@ -157,6 +164,9 @@ Initial release: the AP2/x402 to ISO 20022 bridge, with `from_ap2`,
 `from_x402`, `check_mandate`, `to_pain001` and `to_pacs008`, and an MCP
 server exposing them as agent tools.
 
+[0.0.7]: https://github.com/sebastienrousseau/ap2-iso20022/releases/tag/v0.0.7
+[0.0.6]: https://github.com/sebastienrousseau/ap2-iso20022/releases/tag/v0.0.6
+[0.0.5]: https://github.com/sebastienrousseau/ap2-iso20022/releases/tag/v0.0.5
 [0.0.4]: https://github.com/sebastienrousseau/ap2-iso20022/releases/tag/v0.0.4
 [0.0.2]: https://github.com/sebastienrousseau/ap2-iso20022/releases/tag/v0.0.2
 [0.0.1]: https://github.com/sebastienrousseau/ap2-iso20022/releases/tag/v0.0.1
