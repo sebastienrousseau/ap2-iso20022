@@ -11,7 +11,7 @@ server.** These agentic-payment protocols authorise a payment; this library
 turns that authorisation into the **bank-rail message that actually settles it**
 — the rail the card networks and stablecoins don't cover.
 
-> **Latest release: v0.0.6** — 11 MCP tools over stdio, streamable HTTP or
+> **Latest release: v0.0.7**: 11 MCP tools over stdio, streamable HTTP or
 > SSE, pure-Python (only `mcp`), 100% branch coverage, for Python 3.10+. Output feeds straight into
 > [`pain001`][pain001-mcp] / [`pacs008`][pacs008-mcp] to generate wire-valid XML.
 > Part of the [ISO 20022 MCP suite](#the-suite).
@@ -144,9 +144,9 @@ pytest                      # 100% branch coverage gate
 ruff check ap2_iso20022 tests && black --check ap2_iso20022 tests && mypy ap2_iso20022
 ```
 
-## Licence
+## License
 
-Licensed under the [Apache License, Version 2.0](LICENSE).
+Licensed under the Apache License, Version 2.0 (LICENSE).
 
 ---
 
