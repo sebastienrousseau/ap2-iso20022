@@ -125,9 +125,10 @@ jobs:
 
       - name: Generate CycloneDX SBOM (JSON)
         run: |
-          poetry run cyclonedx-py environment \
+          cyclonedx-py environment \
             --of JSON \
-            -o "ap2-iso20022-${RELEASE_TAG}.cdx.json"
+            -o "ap2-iso20022-${RELEASE_TAG}.cdx.json" \
+            "$(poetry env info --executable)"
 
       - name: Generate SPDX SBOM (JSON)
         uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
@@ -139,7 +140,7 @@ jobs:
 
       - name: Generate pip-licenses manifest
         run: |
-          poetry run pip-licenses \
+          pip-licenses --python "$(poetry env info --executable)" \
             --format=json \
             --with-urls --with-license-file --no-license-path \
             --output-file "ap2-iso20022-${RELEASE_TAG}.licenses.json"
