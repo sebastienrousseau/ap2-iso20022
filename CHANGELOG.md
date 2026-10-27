@@ -7,6 +7,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- The release tooling (`requirements/build.txt`) floors `filelock >= 4.2.1`
+  (GHSA-9vhv-jxww-xfm5, GHSA-567q-5qvw-pf92, GHSA-v4x8-3wr5-3wq8; it pinned
+  4.0.10) and `certifi >= 2026.10.19` (PYSEC-2026-4320; it pinned
+  2026.7.22), and keeps `virtualenv >= 21.14.13` (GHSA-cx6f-vjhg-g3cc).
+  filelock 4.2.1 needs Python 3.11 and only 3.12 jobs install the tree, so
+  it is compiled for 3.12, universally: that restores the pins (cachecontrol
+  among them) a non-universal Dependabot recompile dropped, without which
+  `pip install --require-hashes -r requirements/build.txt` failed.
+- The release SBOM job points `cyclonedx-py environment` and `pip-licenses`
+  at the Poetry venv (`poetry env info --executable`). Run through `poetry
+  run`, they described their own interpreter, so the SBOM listed the SBOM
+  tooling instead of the runtime set.
+- `mcp >= 1.30.0, != 2.0.*, != 2.1.*` (GHSA-84m7-p3x7-pcfv), so neither
+  affected range can resolve.
+
+### Changed
+
+- `requirements/build.in` floors `dulwich >= 1.2.19` (it pinned 1.2.17), in
+  place of Dependabot #45.
+
 ## [0.0.7] - 2026-10-04
 
 ### Documentation
