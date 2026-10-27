@@ -2,6 +2,6 @@
 poetry
 twine
 # Security floors for transitive dependencies
-dulwich>=1.2.9
+dulwich>=1.2.19
 virtualenv>=21.14.13
 urllib3>=2.8.0
